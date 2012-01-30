@@ -97,7 +97,7 @@ def flagging():
     hextoolkit.flagsql(num=0, add=False)
     
     # Use only 3c48
-    hextoolkit.flagsql(wherecmd="WHERE rid IN (SELECT rid FROM runs WHERE source != '3c48')", num=2**14)
+    #hextoolkit.flagsql(wherecmd="WHERE rid IN (SELECT rid FROM runs WHERE source != '3c48')", num=2**14)
 
     # Dont use 700
     hextoolkit.flagsql(wherecmd="WHERE rid IN (SELECT rid FROM runs WHERE freq = 700)", num=2**15)

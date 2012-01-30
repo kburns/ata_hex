@@ -1,10 +1,9 @@
-# hextoolkit.py
-# Keaton Burns, University of California Berkeley, 09/28/2010
 """
 Commonly used hex analysis code.
-Contains functions infopath, antnum, antname, sqlitedb_to_ndarray,
-    sqlitecursor_to_ndarray, atatojday, feedID, gaussread, gausstosql,
-    resetsql, buildsql, hexfromtxt
+
+Author: Keaton J. Burns <keaton.burns@gmail.com>
+Affiliation: UC Berkeley
+
 """
 
 
@@ -15,14 +14,13 @@ import numpy as np
 import sqlite3
 
 
-# Set things up so we can dump numpy array values right
-# into sqlite databases.
+# Set things up so we can dump numpy array values right into sqlite databases.
 sqlite3.register_adapter(np.int32, int)
 sqlite3.register_adapter(np.float32, float)
 sqlite3.register_adapter(np.string_, str)
 
 
-def getdbpath ():
+def getdbpath():
     """Retrieve path to database file"""
     if 'SQUINTDBPATH' in os.environ:
         return os.environ['SQUINTDBPATH']
@@ -52,7 +50,7 @@ def sqlitedb_to_ndarray(fname, table='data', str_length=20):
     cursor = connection.cursor()
     cursor.execute('select * from ' + table)
     
-    data = sqlitecursoe_to_ndarray(cursor, str_length=str_length)
+    data = sqlitecursor_to_ndarray(cursor, str_length=str_length)
     
     # closing the connection
     connection.close()
@@ -82,7 +80,7 @@ def sqlitecursor_to_ndarray(cursor, str_length = 20):
 
     # Autodetected dtype
     dtype = zip(varnm, types)
-    data = np.array(data, dtype = dtype)
+    data = np.array(data, dtype=dtype)
 
     return data
     
