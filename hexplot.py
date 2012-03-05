@@ -141,12 +141,14 @@ def hexplot(xdata, ydata, groupby=None, colorby=None, cmap=None, wherecmd='',
         [xuc, yuc] = [None, None]
         
         if errorbars:
-            if xdata in ['squintel', 'squintaz', 'squintmag', 'squintangle',
-                         'x_width_el', 'x_width_az', 'y_width_el', 'y_width_az']:
+            errordata = ['squintel', 'squintaz', 'squintmag', 'squintangle',
+                         'x_width_el', 'x_width_az', 'y_width_el', 'y_width_az',
+                         'xmag', 'xangle', 'ymag', 'yangle']
+        
+            if xdata in errordata:
                 xuc = data[xdata + '_uc'][igroup]
 
-            if ydata in ['squintel', 'squintaz', 'squintmag', 'squintangle',
-                         'x_width_el', 'x_width_az', 'y_width_el', 'y_width_az']:
+            if ydata in errordata:
                 yuc = data[ydata + '_uc'][igroup]
 
         # Plot the group

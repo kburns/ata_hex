@@ -316,6 +316,11 @@ def gausstosql(path, replacedups=True):
     if gread == 'NO_SQUINT_PAIRS':
         print 'GAUSSTOSQL: No squint pairs found, closing...'
         return
+        
+    # Remove cross17 runs
+    if 'cross17' in info[4]:
+        print 'GAUSSTOSQL: cross17hp run, closing...'
+        return
     
     # Connect to sqlite database
     connection = sqlite3.connect(getdbpath ())
@@ -538,6 +543,12 @@ def querysql(taglist, wherecmd='', exclude_flagged=True):
             if i in ('squintmag', 'squintmag_uc', 'squintangle', 'squintangle_uc'):
                 inputs.append('squintaz')
                 inputs.append('squintel')
+            elif i in ('xmag', 'xmag_uc', 'xangle', 'xangle_uc'):
+                inputs.append('x_width_el')
+                inputs.append('x_width_az')
+            elif i in ('ymag', 'ymag_uc', 'yangle', 'yangle_uc'):
+                inputs.append('y_width_el')
+                inputs.append('y_width_az')
             elif i in ('feed'):
                 inputs.append('round(feed,0) as feed')
             elif i in ('feedrev'):
@@ -574,17 +585,33 @@ def querysql(taglist, wherecmd='', exclude_flagged=True):
     connection.close()
     
     # Create new array with derived tags, if needed
-    getmag = 'squintmag' in taglist or 'squintmag_uc' in taglist
-    getangle = 'squintangle' in taglist or 'squintangle_uc' in taglist
+    getsmag = 'squintmag' in taglist or 'squintmag_uc' in taglist
+    getsangle = 'squintangle' in taglist or 'squintangle_uc' in taglist
+    getxmag = 'xmag' in taglist or 'xmag_uc' in taglist
+    getxangle = 'xangle' in taglist or 'xangle_uc' in taglist
+    getymag = 'ymag' in taglist or 'ymag_uc' in taglist
+    getyangle = 'yangle' in taglist or 'yangle_uc' in taglist
 
     extra_dtypes = []
 
-    if getmag:
+    if getsmag:
         extra_dtypes.append(('squintmag', '<f8'))
         extra_dtypes.append(('squintmag_uc', '<f8'))
-    if getangle:
+    if getsangle:
         extra_dtypes.append(('squintangle', '<f8'))
         extra_dtypes.append(('squintangle_uc', '<f8'))
+    if getxmag:
+        extra_dtypes.append(('xmag', '<f8'))
+        extra_dtypes.append(('xmag_uc', '<f8'))
+    if getxangle:
+        extra_dtypes.append(('xangle', '<f8'))
+        extra_dtypes.append(('xangle_uc', '<f8'))
+    if getymag:
+        extra_dtypes.append(('ymag', '<f8'))
+        extra_dtypes.append(('ymag_uc', '<f8'))
+    if getyangle:
+        extra_dtypes.append(('yangle', '<f8'))
+        extra_dtypes.append(('yangle_uc', '<f8'))
 
     if len(extra_dtypes) == 0:
         return sqldata
@@ -594,18 +621,53 @@ def querysql(taglist, wherecmd='', exclude_flagged=True):
         for i in sqldata.dtype.names:
             data[i] = sqldata[i]
         
-    if getmag:
+    if getsmag:
         data['squintmag'] = np.sqrt(data['squintaz'] ** 2 + data['squintel'] ** 2)
         data['squintmag_uc'] = np.sqrt((data['squintaz_uc'] * data['squintaz']) ** 2 + 
                                        (data['squintel_uc'] * data['squintel']) ** 2) / data['squintmag']
 
-    if getangle:
+    if getsangle:
         data['squintangle'] = np.arctan2(data['squintel'], data['squintaz'])
         el_over_az_uc = (np.sqrt((data['squintel_uc'] / data['squintel']) ** 2 +
                                  (data['squintaz_uc'] / data['squintaz']) ** 2)
                          * data['squintel'] / data['squintaz'])
         data['squintangle_uc'] = (el_over_az_uc /
                                   (1 + (data['squintel'] / data['squintaz']) ** 2))
+
+    if getxmag:
+        data['xmag'] = np.sqrt(data['x_width_az'] * data['x_width_el'])
+        sigazel = data['xmag'] * np.sqrt((data['x_width_el_uc'] / data['x_width_el']) ** 2
+                                       + (data['x_width_az_uc'] / data['x_width_az']) ** 2)
+        data['xmag_uc'] = 0.5 * sigazel / data['xmag']
+       
+        #data['ymag_uc'] = 0.5 * sigazel / data['ymag']
+        #data['xmag'] = np.sqrt(data['x_width_az'] ** 2 + data['x_width_el'] ** 2)
+        #data['xmag_uc'] = np.sqrt((data['x_width_az_uc'] * data['x_width_az']) ** 2 + 
+        #                          (data['x_width_el_uc'] * data['x_width_el']) ** 2) / data['xmag']
+      
+    if getxangle:
+        data['xangle'] = np.arctan2(data['x_width_el'], data['x_width_az'])
+        el_over_az_uc = (np.sqrt((data['x_width_el_uc'] / data['x_width_el']) ** 2 +
+                                 (data['x_width_az_uc'] / data['x_width_az']) ** 2)
+                         * data['x_width_el'] / data['x_width_az'])
+        data['xangle_uc'] = (el_over_az_uc /
+                             (1 + (data['x_width_el'] / data['x_width_az']) ** 2))
+       
+    if getymag:
+        data['ymag'] = np.sqrt(data['y_width_az'] * data['y_width_el'])
+        sigazel = data['ymag'] * np.sqrt((data['y_width_el_uc'] / data['y_width_el']) ** 2
+                                       + (data['y_width_az_uc'] / data['y_width_az']) ** 2)
+        data['ymag_uc'] = 0.5 * sigazel / data['ymag']
+    
+    if getyangle:
+        data['yangle'] = np.arctan2(data['y_width_el'], data['y_width_az'])
+        el_over_az_uc = (np.sqrt((data['y_width_el_uc'] / data['y_width_el']) ** 2 +
+                                 (data['y_width_az_uc'] / data['y_width_az']) ** 2)
+                         * data['y_width_el'] / data['y_width_az'])
+        data['yangle_uc'] = (el_over_az_uc /
+                             (1 + (data['y_width_el'] / data['y_width_az']) ** 2))
+       
+
 
     return data
     
