@@ -1,7 +1,9 @@
-# hexanalysis.py
-# Keaton Burns, University of California Berkeley, 03/22/2011
 """
-Data generators for plotting some stuff....
+Plotting and analysis procedures.
+
+Author: Keaton J. Burns <keaton.burns@gmail.com>
+Affiliation: UC Berkeley
+
 """
 
 
@@ -12,9 +14,7 @@ import scipy.stats
 import matplotlib
 import matplotlib.pyplot as plt
 import hextoolkit
-
-
-plotfolder = '~/Research/hex7/plots/'
+from kbtoolkit import normal_dist
 
 
 def abs_dist(tag, percentile=95, flag=False, plot=True, save=False):
@@ -278,7 +278,8 @@ def magfreq_plot(mincount=1, log=False, saveas='magfreq.pdf'):
         pp.savefig()
         
     pp.close()
-    
+  
+  
 def magfreq_powerlaw_fit(mincount=1, bins = 25, fit_of_medians=False, rev=False):
     """Compute power laws of squint vs mag dependence for each antfeedrev"""
 
@@ -372,7 +373,7 @@ def magfreq_powerlaw_fit(mincount=1, bins = 25, fit_of_medians=False, rev=False)
             
     return np.array(powers), np.array(slopes)
     
-        
+    
 def magfreq_powerlaw_rev(mincount=1, bins=50, save=False, fit_of_medians=False):
     """Compute power laws by rev of squint vs mag dependence for each antfeedrev
     
@@ -415,7 +416,8 @@ def magfreq_powerlaw_rev(mincount=1, bins=50, save=False, fit_of_medians=False):
     if save:
         if save == True: save = 'powerlaw_rev.png'
         plt.savefig(save, type='png')
-        
+ 
+ 
 def ant_corr():
     """Compute correlations between median squintmag for each frequency and ant/feed number"""
     
@@ -472,7 +474,8 @@ def ant_corr():
     plt.text(-0.3, 1.5, 'Mean = %f' %np.average(ant_corr))
     plt.axis([-1, 0, 0, 2])
     plt.savefig('ant_feed_corr/ant_corr.png', type='png')
-                
+ 
+ 
 def feed_corr():
     """Compute correlations between median squintmag for each frequency and ant/feed number"""
     
@@ -568,7 +571,8 @@ def beam_width_stats(wherecmd='', bins=50):
     ax = fig.add_subplot(224)
     ax.hist(ywa, bins=bins)
     ax.set_title('Y Width Az')
-    
+ 
+ 
 def beam_width_vs_freq(bins=50):
     """Plot beam width by pol and direction."""
     
@@ -622,101 +626,138 @@ def beam_width_vs_freq(bins=50):
     plt.ylabel(r'$FWHM \times f_{GHz}$')
     
     plt.savefig('beamw_freq.png', type='png')
-    
-def beam_width_scatter():
 
-    # Query data
-    data = hextoolkit.querysql(['freq', 'x_width_el', 'x_width_az',
-                                'y_width_el', 'y_width_az'])
-                                
-    fghz = data['freq'] / 1000.
-    xwe = data['x_width_el']
-    xwe_uc = data['x_width_el_uc']
-    xwa = data['x_width_az']
-    xwa_uc = data['x_width_az_uc']
-    ywe = data['y_width_el']
-    ywe_uc = data['y_width_el_uc']
-    ywa = data['y_width_az']
-    ywa_uc = data['y_width_az_uc']
-    
-    # Definitions for the axes
-    nullfmt = matplotlib.ticker.NullFormatter()
-    left, width = 0.1, 0.65
-    bottom, height = 0.1, 0.65
-    bottom_h = left_h = left+width+0.02
-    
-    rect_scatter = [left, bottom, width, height]
-    rect_histx = [left, bottom_h, width, 0.2]
-    rect_histy = [left_h, bottom, 0.2, height]
 
-    for pol in ['x', 'y']:
+def beam_shape_plot(coords='mag_angle', type='scatter', saveas=None):
+    """
+    Make distribution plots of beam shape.
+    
+    Inputs:
+        coords      'az_el' or 'mag_angle' or 'mag_ecc'
+        type        'scatter' or 'density'
+        saveas      Path and filename for saving (will be prepended with polarization)
+    
+    """
+    
+    if coords == 'az_el':
+        data = hextoolkit.querysql(['freq', 'x_width_el', 'x_width_az',
+                                    'y_width_el', 'y_width_az'])
+        fghz = data['freq'] / 1000.
+        
+        xx = data['x_width_az'] * 2 * fghz
+        xx_uc = data['x_width_az_uc'] * 2 * fghz
+        xy = data['x_width_el'] * 2 * fghz
+        xy_uc = data['x_width_el_uc'] * 2 * fghz
+        yx = data['y_width_az'] * 2 * fghz
+        yx_uc = data['y_width_az_uc'] * 2 * fghz
+        yy = data['y_width_el'] * 2 * fghz
+        yy_uc = data['y_width_el_uc'] * 2 * fghz
+        
+        hline = 3.5
+        vline = 3.5
+        
+        xlabel = lambda pol: r'$\rm{%s \, Azimuth \, FWHM \, (degrees \times \, f_{GHz})}$' %pol
+        ylabel = lambda pol: r'$\rm{%s \, Elevation \, FWHM \, (degrees \times \, f_{GHz})}$' %pol
+        
+        if saveas == True:
+            saveas = 'az_el.png'
+            
+        xlim = None
+        ylim = None
+        
+        print 'DATA: xwa, ywa, xwe, ywe'
+    
+    elif coords == 'mag_angle':
+        data = hextoolkit.querysql(['freq', 'xmag', 'xangle', 'ymag', 'yangle'])
+        fghz = data['freq'] / 1000.
+        
+        xx = data['xmag'] * 2 * fghz
+        xx_uc = data['xmag_uc'] * 2 * fghz
+        xy = data['xangle'] * 180. / np.pi
+        xy_uc = data['xangle_uc'] * 180. / np.pi
+        yx = data['ymag'] * 2 * fghz
+        yx_uc = data['ymag_uc'] * 2 * fghz
+        yy = data['yangle'] * 180. / np.pi
+        yy_uc = data['yangle_uc'] * 180. / np.pi
+        
+        hline = 45.0
+        vline = 3.5
+        
+        xlabel = lambda pol: r'$\rm{%s \, Beam \, Size \, (degrees \times \, f_{GHz})}$' %pol
+        ylabel = lambda pol: r'$\rm{%s \, Beam \, Angle \, (degrees)}$' %pol
+        
+        if saveas == True:
+            saveas = 'mag_angle.png'
+            
+        xlim = None
+        ylim = None
+        
+        print 'DATA: x mag, y mag, x angle, y angle'
+    
+    elif coords == 'mag_ecc':
+        data = hextoolkit.querysql(['freq', 'xmag', 'ymag'])
+        fghz = data['freq'] / 1000.
+        
+        xm = data['xmag']
+        xm_uc = data['xmag_uc']
+        
+        xa2 = data['x_width_az'] ** 2
+        xa2_uc = 2 * data['x_width_az'] * data['x_width_az_uc']
+        xe2 = data['x_width_el'] ** 2
+        xe2_uc = 2 * data['x_width_el'] * data['x_width_el_uc']
+        
+        pmask = (xa2 >= xe2)
+        xfrac = xa2 / xe2
+        xfrac[pmask] = (xe2 / xa2)[pmask]
+        xfrac_uc = xfrac * np.sqrt((xa2_uc / xa2)**2 + (xe2_uc / xe2)**2)
+        xecc = np.sqrt(1 - xfrac)
+        xecc[pmask] *= -1
+        xecc_uc = 0.5 * xecc / (1 - xfrac) * xfrac_uc
+        
+        ym = data['ymag']
+        ym_uc = data['ymag_uc']
+        
+        ya2 = data['y_width_az'] ** 2
+        ya2_uc = 2 * data['y_width_az'] * data['y_width_az_uc']
+        ye2 = data['y_width_el'] ** 2
+        ye2_uc = 2 * data['y_width_el'] * data['y_width_el_uc']
+        
+        pmask = (ya2 >= ye2)
+        yfrac = ya2 / ye2
+        yfrac[pmask] = (ye2 / ya2)[pmask]
+        yfrac_uc = yfrac * np.sqrt((ya2_uc / ya2)**2 + (ye2_uc / ye2)**2)
+        yecc = np.sqrt(1 - yfrac)
+        yecc[pmask] *= -1
+        yecc_uc = 0.5 * yecc / (1 - yfrac) * yfrac_uc
+        
+        xx = data['xmag'] * 2 * fghz
+        xx_uc = data['xmag_uc'] * 2 * fghz
+        xy = xecc
+        xy_uc = xecc_uc
+        yx = data['ymag'] * 2 * fghz
+        yx_uc = data['ymag_uc'] * 2 * fghz
+        yy = yecc
+        yy_uc = yecc_uc
+        
+        hline = 0.0
+        vline = 3.5
+        
+        xlabel = lambda pol: r'$\rm{%s \, Beam \, Size \, (degrees \times \, f_{GHz})}$' %pol
+        ylabel = lambda pol: r'$\rm{%s \, Eccentricity}$' %pol
+        
+        if saveas == True:
+            saveas = 'mag_ecc.png'
+            
+        xlim = None
+        ylim = [-1, 1]
+        
+        print 'DATA: x mag, y mag, x ecc, y ecc'
 
-        plt.figure(1, figsize=(8,8))
-        plt.clf()
-        
-        if pol == 'x':
-            x = 2 * xwa * fghz
-            xuc = 2 * xwa_uc * fghz
-            y = 2 * xwe * fghz
-            yuc = 2 * xwe_uc * fghz
-        else:
-            x = 2 * ywa * fghz
-            xuc = 2 * ywa_uc * fghz
-            y = 2 * ywe * fghz
-            yuc = 2 * ywe_uc * fghz
-    
-        axScatter = plt.axes(rect_scatter)
-        axHistx = plt.axes(rect_histx)
-        axHisty = plt.axes(rect_histy)
-        
-        # no labels
-        axHistx.xaxis.set_major_formatter(nullfmt)
-        axHisty.yaxis.set_major_formatter(nullfmt)
-        
-        # the scatter plot:
-        axScatter.errorbar(x, y, xerr=xuc, yerr=yuc, fmt='o')
-        axScatter.set_xlabel(r'$\rm{AZ FWHM}_{%s} \times f_{GHz}$' %pol)
-        axScatter.set_ylabel(r'$\rm{EL FWHM}_{%s} \times f_{GHz}$' %pol)
-        
-        # now determine nice limits by hand:
-        binwidth = 0.1
-        xymax = np.max([np.max(x), np.max(y)])
-        lim = (int(xymax/binwidth) + 1) * binwidth
-        
-        axScatter.set_xlim((0, lim))
-        axScatter.set_ylim((0, lim))
-        
-        bins = np.arange(0, lim + binwidth, binwidth)
-        axHistx.hist(x, bins=bins, log=True)
-        axHisty.hist(y, bins=bins, orientation='horizontal', log=True)
-        
-        axHistx.set_xlim(axScatter.get_xlim())
-        axHisty.set_ylim(axScatter.get_ylim())
-
-        plt.savefig(pol + '_widths.png', type='png')
-        
-        
-        
-def beam_mag_angle():
-    
-    # Query data
-    data = hextoolkit.querysql(['freq', 'xmag', 'xangle', 'ymag', 'yangle'])
-                                
-    fghz = data['freq'] / 1000.
-    xm = data['xmag'] * 2 * fghz
-    xm_uc = data['xmag_uc'] * 2 * fghz
-    xa = data['xangle'] * 180. / np.pi
-    xa_uc = data['xangle_uc'] * 180. / np.pi
-    ym = data['ymag'] * 2 * fghz
-    ym_uc = data['ymag_uc'] * 2 * fghz
-    ya = data['yangle'] * 180. / np.pi
-    ya_uc = data['yangle_uc'] * 180. / np.pi
-    
-    print 'DATA: x mag, y mag, x angle, y angle'
-    print 'MEDIAN:', np.median(xm), np.median(ym), np.median(xa), np.median(ya)
-    print 'MEAN:  ', np.mean(xm), np.mean(ym), np.mean(xa), np.mean(ya)
-    print ' ERR:  ', np.std(xm) / np.sqrt(xm.size), np.std(ym) / np.sqrt(ym.size), np.std(xa) / np.sqrt(xa.size), np.std(ya) / np.sqrt(ya.size)
-    print 'STDEV: ', np.std(xm), np.std(ym), np.std(xa), np.std(ya)
+    # Print stats
+    print 'MEDIAN:', np.median(xx), np.median(yx), np.median(xy), np.median(yy)
+    print 'MEAN:  ', np.mean(xx), np.mean(yx), np.mean(xy), np.mean(yy)
+    print ' ERR:  ', np.std(xx) / np.sqrt(xx.size), np.std(yx) / np.sqrt(yx.size), np.std(xy) / np.sqrt(xy.size), np.std(yy) / np.sqrt(yy.size)
+    print 'STDEV: ', np.std(xx), np.std(yx), np.std(xy), np.std(yy)
     
     # Definitions for the axes
     nullfmt = matplotlib.ticker.NullFormatter()
@@ -734,9 +775,9 @@ def beam_mag_angle():
         plt.clf()
         
         if pol == 'X':
-            x, xuc, y, yuc = xm, xm_uc, xa, xa_uc
+            x, xuc, y, yuc = xx, xx_uc, xy, xy_uc
         else:
-            x, xuc, y, yuc = ym, ym_uc, ya, ya_uc
+            x, xuc, y, yuc = yx, yx_uc, yy, yy_uc
                 
         axScatter = plt.axes(rect_scatter)
         axHistx = plt.axes(rect_histx)
@@ -746,120 +787,64 @@ def beam_mag_angle():
         axHistx.xaxis.set_major_formatter(nullfmt)
         axHisty.yaxis.set_major_formatter(nullfmt)
         
-        # Scatter plot
-        axScatter.errorbar(x, y, xerr=xuc, yerr=yuc, fmt='o')
-        axScatter.axhline(45, c='r')
-        axScatter.axvline(3.5, c='r')
-        axScatter.set_xlabel(r'$\rm{%s\,Beam\,Size} \, \times \, f_{GHz}$' %pol)
-        axScatter.set_ylabel(r'$\rm{%s\,Beam\,Angle\;(degrees)}$' %pol)
-        
+        # Scatter/Density plot
+        if type == 'scatter':
+            axScatter.errorbar(x, y, xerr=xuc, yerr=yuc, fmt='o')
+        if type == 'density':
+            density, xedges, yedges = np.histogram2d(x, y, bins=100)
+            extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+            logd = np.log10(density)
+            logd[logd == -np.inf] = -1
+            levels = np.arange(-0.5, np.ceil(np.max(logd)), 0.5)
+            axScatter.contour(logd.T, levels, extent=extent)
+         
         # Histograms
         bins = 40
-        xlim = axScatter.get_xlim()
-        ylim = axScatter.get_ylim()
-        axHistx.hist(x, bins=bins, log=True)
-        axHistx.axvline(3.5, c='r')
-        axHisty.hist(y, bins=bins, orientation='horizontal', log=True)
-        axHisty.axhline(45, c='r')
-        
+        xn, xb, xp = axHistx.hist(x, bins=bins, log=True)
+        yn, yb, yp = axHisty.hist(y, bins=bins, orientation='horizontal', log=True)
+                
+        # Limits
+        if xlim:
+            axScatter.set_xlim(xlim)
+        else:
+            xlim = axScatter.get_xlim()
+        if ylim:
+            axScatter.set_ylim(ylim)
+        else:
+            ylim = axScatter.get_ylim()
+          
         axHistx.set_xlim(xlim)
         axHisty.set_ylim(ylim)
+        
+        # Gaussian fits
+        N = 1000
+        gx = np.linspace(xlim[0], xlim[1], N)
+        gy = np.linspace(ylim[0], ylim[1], N)
+        xylim = axHistx.get_ylim()
+        yxlim = axHisty.get_xlim()
+        fx = normal_dist(np.mean(x), np.std(x))(gx) * x.size * np.diff(xb)[0]
+        fy = normal_dist(np.mean(y), np.std(y))(gy) * y.size * np.diff(yb)[0]
+        axHistx.plot(gx, fx, 'g')
+        axHisty.plot(fy, gy, 'g')
+        axHistx.set_ylim(xylim)
+        axHisty.set_xlim(yxlim)
+        
+        # Axis labels
+        axScatter.set_xlabel(xlabel(pol))
+        axScatter.set_ylabel(ylabel(pol))
+        
+        # Lines
+        axScatter.axhline(hline, c='r')
+        axScatter.axvline(vline, c='r')
+        axHistx.axvline(vline, c='r')
+        axHisty.axhline(hline, c='r')
 
-        plt.savefig(pol + '_magangle.png', type='png')
+        # Save
+        if saveas:
+            folder, file = os.path.split(saveas)
+            plt.savefig(os.path.join(folder, pol + '_' + file))
         
-        
-def beam_mag_ecc():
-    
-    # Query data
-    data = hextoolkit.querysql(['freq', 'xmag', 'ymag'])
-                                
-    fghz = data['freq'] / 1000.
-    
-    xm = data['xmag']
-    xm_uc = data['xmag_uc']
-    
-    xa2 = data['x_width_az'] ** 2
-    xa2_uc = 2 * data['x_width_az'] * data['x_width_az_uc']
-    xe2 = data['x_width_el'] ** 2
-    xe2_uc = 2 * data['x_width_el'] * data['x_width_el_uc']
-    
-    pmask = (xa2 >= xe2)
-    xfrac = xa2 / xe2
-    xfrac[pmask] = (xe2 / xa2)[pmask]
-    xfrac_uc = xfrac * np.sqrt((xa2_uc / xa2)**2 + (xe2_uc / xe2)**2)
-    xecc = np.sqrt(1 - xfrac)
-    xecc[pmask] *= -1
-    xecc_uc = 0.5 * xecc / (1 - xfrac) * xfrac_uc
-    
-    ym = data['ymag']
-    ym_uc = data['ymag_uc']
-    
-    ya2 = data['y_width_az'] ** 2
-    ya2_uc = 2 * data['y_width_az'] * data['y_width_az_uc']
-    ye2 = data['y_width_el'] ** 2
-    ye2_uc = 2 * data['y_width_el'] * data['y_width_el_uc']
-    
-    pmask = (ya2 >= ye2)
-    yfrac = ya2 / ye2
-    yfrac[pmask] = (ye2 / ya2)[pmask]
-    yfrac_uc = yfrac * np.sqrt((ya2_uc / ya2)**2 + (ye2_uc / ye2)**2)
-    yecc = np.sqrt(1 - yfrac)
-    yecc[pmask] *= -1
-    yecc_uc = 0.5 * yecc / (1 - yfrac) * yfrac_uc
-    
-    # Definitions for the axes
-    nullfmt = matplotlib.ticker.NullFormatter()
-    left, width = 0.1, 0.65
-    bottom, height = 0.1, 0.65
-    bottom_h = left_h = left+width+0.02
-    
-    rect_scatter = [left, bottom, width, height]
-    rect_histx = [left, bottom_h, width, 0.2]
-    rect_histy = [left_h, bottom, 0.2, height]
 
-    for pol in ['x', 'y']:
-
-        plt.figure(1, figsize=(8,8))
-        plt.clf()
-        
-        if pol == 'x':
-            x = 2 * xm * fghz
-            xuc = 2 * xm_uc * fghz
-            y = xecc
-            yuc = xecc_uc
-        else:
-            x = 2 * ym * fghz
-            xuc = 2 * ym_uc * fghz
-            y = yecc
-            yuc = yecc_uc
-    
-        axScatter = plt.axes(rect_scatter)
-        axHistx = plt.axes(rect_histx)
-        axHisty = plt.axes(rect_histy)
-        
-        # no labels
-        axHistx.xaxis.set_major_formatter(nullfmt)
-        axHisty.yaxis.set_major_formatter(nullfmt)
-        
-        # the scatter plot:
-        axScatter.errorbar(x, y, xerr=xuc, yerr=yuc, fmt='o')
-        axScatter.set_xlabel(r'$\rm{%s\,Beam\,Size} \, \times \, f_{GHz}$' %pol)
-        axScatter.set_ylabel(r'$\rm{%s\,Eccentricity}$' %pol)
-        axScatter.set_ylim([-1, 1])
-        print np.max(xuc)
-        print np.max(yuc)
-        
-        # now determine nice limits by hand:
-        bins = 40
-        axHistx.hist(x, bins=bins, log=True)
-        axHisty.hist(y, bins=bins, orientation='horizontal', log=True)
-        
-        axHistx.set_xlim(axScatter.get_xlim())
-        axHisty.set_ylim(axScatter.get_ylim())
-
-        plt.savefig(pol + '_magecc.png', type='png')
-        
-        
 def squintmag_time_evolution(rev=False):
     
     # Query data
@@ -892,6 +877,7 @@ def squintmag_time_evolution(rev=False):
             deviations.append(np.std(squint))
 
     return np.array(deviations)
+    
     
 def squintmag_time_rev(bins=50, save=False):
 

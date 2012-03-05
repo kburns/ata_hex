@@ -1,6 +1,10 @@
-# hexplot.py
-# Keaton Burns, University of California Berkeley, 09/28/2010
-"""Tools for visualizing data from hex SQLite database"""
+"""
+Tools for visualizing data from hex SQLite database
+
+Author: Keaton J. Burns <keaton.burns@gmail.com>
+Affiliation: UC Berkeley
+
+"""
 
 
 import numpy as np

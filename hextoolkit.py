@@ -1,5 +1,5 @@
 """
-Commonly used hex analysis code.
+Hex analysis toolkit.
 
 Author: Keaton J. Burns <keaton.burns@gmail.com>
 Affiliation: UC Berkeley
