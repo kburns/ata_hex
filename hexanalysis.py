@@ -17,31 +17,16 @@ import hextoolkit
 from kbtoolkit import normal_dist
 
 
-def abs_dist(tag, percentile=95, flag=False, plot=True, save=False):
+def abs_dist(tag, percentile=95, flag=False, plot=True, saveas=False):
     """
-    abs_dist
-    ========
+    Determine cutoff percentile for specified tag, plot histogram, flag
     
-    PURPOSE:
-        Determine cutoff percentile for specified tag, plot histogram, flag
-    
-    CALLING SEQUENCE:
-        abs_dist(tag, percentile=95, flag=False, plot=True, save=False)
-    
-    INPUTS:
-        tag         :=  tag for data to examine
-        percentile  :=  percentile for cutoff, in range [0, 100]
-        flag        :=  flagging number if flagging obs past cutoff is desired
-        plot        :=  Boolean to create histogram plot
-        save        :=  Boolean to save histogram plot
-
-    TAG LIST:
-            'squintaz'
-            'squintaz_uc'
-            'squintel'
-            'squintel_uc'
-            'sefd'
-            'sumchisq'
+    Inputs:
+        tag             tag for data to examine
+        percentile      percentile for cutoff, in range [0, 100]
+        flag            flagging number if flagging obs past cutoff is desired
+        plot            Boolean to create histogram plot
+        save            Boolean to save histogram plot
 
     """
     
@@ -79,8 +64,9 @@ def abs_dist(tag, percentile=95, flag=False, plot=True, save=False):
         prop = matplotlib.font_manager.FontProperties(size='small')
         plt.legend(prop=prop)
         
-        if save:
-            plt.savefig('dist_' + tag + '.png', type='png')
+        if saveas:
+            if saveas is True: saveas = 'dist_' + tag + '.png'
+            plt.savefig(saveas)
     
     if flag:
         # Default flag value
@@ -96,9 +82,6 @@ def flagging(analyze=False, saveas=False):
     # Reset all flags
     hextoolkit.flagsql(num=0, add=False)
     
-    # Use only 3c48
-    #hextoolkit.flagsql(wherecmd="WHERE rid IN (SELECT rid FROM runs WHERE source != '3c48')", num=2**14)
-
     # Dont use 700
     hextoolkit.flagsql(wherecmd="WHERE rid IN (SELECT rid FROM runs WHERE freq = 700)", num=2**15)
     
@@ -146,13 +129,8 @@ def flagging(analyze=False, saveas=False):
         
         print a_list
         print 'Totals:', flag_totals / np.asfarray(a_count)
-                            
-    #     print np.sum(flaggrid, 0)
-    #                            
-    #     print [row[0] for row in flaglist]
-    #     for n in xrange(N):
-    #         print Alist[n], flaggrid[n]
-            
+                    
+        plt.figure(figsize=(12,8))
         plt.clf()
         ax = plt.gca()
         
@@ -180,8 +158,8 @@ def flagging(analyze=False, saveas=False):
         plt.draw()
         
         if saveas:
-            if saveas is True: saveas = 'current_flagging'
-            plt.savefig(saveas + '.png')
+            if saveas is True: saveas = 'current_flagging.png'
+            plt.savefig(saveas)
         
     
 def stats():
@@ -224,6 +202,316 @@ def stats():
     print 'Num Feeds with Multiple Antennas = ', feeds_mult_ant
     print '    Obs                          = ', fma_obs
 
+
+def beam_shape_plot(coords='mag_angle', type='scatter', saveas=False, wherecmd=''):
+    """
+    Make distribution plots of beam shape.
+    
+    Inputs:
+        coords      One of ['az_el', 'mag_angle', 'mag_ecc']
+        type        One of ['scatter','density']
+        saveas      Path and filename for saving (will be prepended with polarization)
+        wherecmd    "Where" filter for data
+    
+    """
+    
+    if coords == 'az_el':
+        data = hextoolkit.querysql(['freq', 'x_width_el', 'x_width_az',
+                                    'y_width_el', 'y_width_az'], wherecmd=wherecmd)
+        fghz = data['freq'] / 1000.
+        
+        xx = data['x_width_az'] * 2 * fghz
+        xx_uc = data['x_width_az_uc'] * 2 * fghz
+        xy = data['x_width_el'] * 2 * fghz
+        xy_uc = data['x_width_el_uc'] * 2 * fghz
+        yx = data['y_width_az'] * 2 * fghz
+        yx_uc = data['y_width_az_uc'] * 2 * fghz
+        yy = data['y_width_el'] * 2 * fghz
+        yy_uc = data['y_width_el_uc'] * 2 * fghz
+        
+        hline = 3.5
+        vline = 3.5
+        
+        xlabel = lambda pol: r'$\rm{%s \, Azimuth \, FWHM \, (degrees \times \, f_{GHz})}$' %pol
+        ylabel = lambda pol: r'$\rm{%s \, Elevation \, FWHM \, (degrees \times \, f_{GHz})}$' %pol
+        
+        if saveas is True:
+            saveas = 'az_el.png'
+            
+        xlim = None
+        ylim = None
+        
+        print 'DATA: xwa, ywa, xwe, ywe'
+    
+    elif coords == 'mag_angle':
+        data = hextoolkit.querysql(['freq', 'xmag', 'xangle', 'ymag', 'yangle'], wherecmd=wherecmd)
+        fghz = data['freq'] / 1000.
+        
+        xx = data['xmag'] * 2 * fghz
+        xx_uc = data['xmag_uc'] * 2 * fghz
+        xy = data['xangle'] * 180. / np.pi
+        xy_uc = data['xangle_uc'] * 180. / np.pi
+        yx = data['ymag'] * 2 * fghz
+        yx_uc = data['ymag_uc'] * 2 * fghz
+        yy = data['yangle'] * 180. / np.pi
+        yy_uc = data['yangle_uc'] * 180. / np.pi
+        
+        hline = 45.0
+        vline = 3.5
+        
+        xlabel = lambda pol: r'$\rm{%s \, Beam \, Size \, (degrees \times \, f_{GHz})}$' %pol
+        ylabel = lambda pol: r'$\rm{%s \, Beam \, Angle \, (degrees)}$' %pol
+        
+        if saveas is True:
+            saveas = 'mag_angle.png'
+            
+        xlim = None
+        ylim = None
+        
+        print 'DATA: x mag, y mag, x angle, y angle'
+    
+    elif coords == 'mag_ecc':
+        data = hextoolkit.querysql(['freq', 'xmag', 'ymag'], wherecmd=wherecmd)
+        fghz = data['freq'] / 1000.
+        
+        xm = data['xmag']
+        xm_uc = data['xmag_uc']
+        
+        xa2 = data['x_width_az'] ** 2
+        xa2_uc = 2 * data['x_width_az'] * data['x_width_az_uc']
+        xe2 = data['x_width_el'] ** 2
+        xe2_uc = 2 * data['x_width_el'] * data['x_width_el_uc']
+        
+        pmask = (xa2 >= xe2)
+        xfrac = xa2 / xe2
+        xfrac[pmask] = (xe2 / xa2)[pmask]
+        xfrac_uc = xfrac * np.sqrt((xa2_uc / xa2)**2 + (xe2_uc / xe2)**2)
+        xecc = np.sqrt(1 - xfrac)
+        xecc[pmask] *= -1
+        xecc_uc = 0.5 * xecc / (1 - xfrac) * xfrac_uc
+        
+        ym = data['ymag']
+        ym_uc = data['ymag_uc']
+        
+        ya2 = data['y_width_az'] ** 2
+        ya2_uc = 2 * data['y_width_az'] * data['y_width_az_uc']
+        ye2 = data['y_width_el'] ** 2
+        ye2_uc = 2 * data['y_width_el'] * data['y_width_el_uc']
+        
+        pmask = (ya2 >= ye2)
+        yfrac = ya2 / ye2
+        yfrac[pmask] = (ye2 / ya2)[pmask]
+        yfrac_uc = yfrac * np.sqrt((ya2_uc / ya2)**2 + (ye2_uc / ye2)**2)
+        yecc = np.sqrt(1 - yfrac)
+        yecc[pmask] *= -1
+        yecc_uc = 0.5 * yecc / (1 - yfrac) * yfrac_uc
+        
+        xx = data['xmag'] * 2 * fghz
+        xx_uc = data['xmag_uc'] * 2 * fghz
+        xy = xecc
+        xy_uc = xecc_uc
+        yx = data['ymag'] * 2 * fghz
+        yx_uc = data['ymag_uc'] * 2 * fghz
+        yy = yecc
+        yy_uc = yecc_uc
+        
+        hline = 0.0
+        vline = 3.5
+        
+        xlabel = lambda pol: r'$\rm{%s \, Beam \, Size \, (degrees \times \, f_{GHz})}$' %pol
+        ylabel = lambda pol: r'$\rm{%s \, Eccentricity}$' %pol
+        
+        if saveas is True:
+            saveas = 'mag_ecc.png'
+            
+        xlim = None
+        ylim = [-1, 1]
+        
+        print 'DATA: x mag, y mag, x ecc, y ecc'
+
+    # Print stats
+    print 'MEDIAN:', np.median(xx), np.median(yx), np.median(xy), np.median(yy)
+    print 'MEAN:  ', np.mean(xx), np.mean(yx), np.mean(xy), np.mean(yy)
+    print ' ERR:  ', np.std(xx) / np.sqrt(xx.size), np.std(yx) / np.sqrt(yx.size), np.std(xy) / np.sqrt(xy.size), np.std(yy) / np.sqrt(yy.size)
+    print 'STDEV: ', np.std(xx), np.std(yx), np.std(xy), np.std(yy)
+    
+    # Definitions for the axes
+    nullfmt = matplotlib.ticker.NullFormatter()
+    left, width = 0.1, 0.65
+    bottom, height = 0.1, 0.65
+    bottom_h = left_h = left+width+0.02
+    
+    rect_scatter = [left, bottom, width, height]
+    rect_histx = [left, bottom_h, width, 0.2]
+    rect_histy = [left_h, bottom, 0.2, height]
+
+    for pol in ['X', 'Y']:
+
+        plt.figure(1, figsize=(8,8))
+        plt.clf()
+        
+        if pol == 'X':
+            x, xuc, y, yuc = xx, xx_uc, xy, xy_uc
+        else:
+            x, xuc, y, yuc = yx, yx_uc, yy, yy_uc
+                
+        axScatter = plt.axes(rect_scatter)
+        axHistx = plt.axes(rect_histx)
+        axHisty = plt.axes(rect_histy)
+        
+        # Remove histogram ticklabels
+        axHistx.xaxis.set_major_formatter(nullfmt)
+        axHisty.yaxis.set_major_formatter(nullfmt)
+        
+        # Scatter/Density plot
+        if type == 'scatter':
+            axScatter.errorbar(x, y, xerr=xuc, yerr=yuc, fmt='o')
+        if type == 'density':
+            density, xedges, yedges = np.histogram2d(x, y, bins=100)
+            extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+            logd = np.log10(density)
+            logd[logd == -np.inf] = -1
+            levels = np.arange(-0.5, np.ceil(np.max(logd)), 0.5)
+            axScatter.contour(logd.T, levels, extent=extent)
+         
+        # Histograms
+        bins = 40
+        xn, xb, xp = axHistx.hist(x, bins=bins, log=True)
+        yn, yb, yp = axHisty.hist(y, bins=bins, orientation='horizontal', log=True)
+                
+        # Limits
+        if xlim:
+            axScatter.set_xlim(xlim)
+        else:
+            xlim = axScatter.get_xlim()
+        if ylim:
+            axScatter.set_ylim(ylim)
+        else:
+            ylim = axScatter.get_ylim()
+          
+        axHistx.set_xlim(xlim)
+        axHisty.set_ylim(ylim)
+        
+        # Gaussian fits
+        N = 1000
+        gx = np.linspace(xlim[0], xlim[1], N)
+        gy = np.linspace(ylim[0], ylim[1], N)
+        xylim = axHistx.get_ylim()
+        yxlim = axHisty.get_xlim()
+        fx = normal_dist(np.mean(x), np.std(x))(gx) * x.size * np.diff(xb)[0]
+        fy = normal_dist(np.mean(y), np.std(y))(gy) * y.size * np.diff(yb)[0]
+        axHistx.plot(gx, fx, 'g')
+        axHisty.plot(fy, gy, 'g')
+        axHistx.set_ylim(xylim)
+        axHisty.set_xlim(yxlim)
+        
+        # Axis labels
+        axScatter.set_xlabel(xlabel(pol))
+        axScatter.set_ylabel(ylabel(pol))
+        
+        # Lines
+        axScatter.axhline(hline, c='r')
+        axScatter.axvline(vline, c='r')
+        axHistx.axvline(vline, c='r')
+        axHisty.axhline(hline, c='r')
+
+        # Save
+        if saveas:
+            folder, file = os.path.split(saveas)
+            plt.savefig(os.path.join(folder, pol + '_' + file))
+
+
+def beam_shape_by_freq(coords='az_el', type='density', saveas=False):
+    """Make beam shape plots for each frequency."""
+
+    data = hextoolkit.querysql(['freq'])
+    freqs = np.unique(data['freq'])
+    
+    if saveas is True:
+        saveas = 'beam_shape.png'
+    
+    for f in freqs:
+        fsave = str(f) + '_' + saveas
+        beam_shape_plot(coords=coords, type=type, saveas=fsave, wherecmd='WHERE freq=%f' %f)
+
+
+def squint_stddev(rev=False):
+    
+    # Query data
+    data = hextoolkit.querysql(['antfeedrev','date','squintmag','squintangle','freq'])
+    
+    antfeedrevs = np.unique(data['antfeedrev'])
+    freqlist = np.unique(data['freq'])
+    daylist = np.unique(np.round(data['date']))
+
+    magdev = []
+    angledev = []
+    
+    # Examine each antfeedred
+    for afr in antfeedrevs:
+        if rev:
+            if np.round(np.mod(afr, 1), 1) != rev: continue
+
+        idata = data[np.where(data['antfeedrev'] == afr)]
+
+        # Examine each day
+        for f in freqlist:
+            ifdata = idata[np.where(idata['freq'] == f)]
+            # Skip if no points for this antfeedrev in this run
+            if ifdata.size < 2: 
+                continue
+            
+            # Compute magnitude standard deviation as a fraction of the mean
+            mag = ifdata['squintmag']
+            mag /= mag.mean()
+            magdev.append(np.std(mag))
+            
+            # Compute angle standard deviation as a fraction of 2*pi, minimizing over circle
+            angle = ifdata['squintangle']
+            modangles = np.linspace(0, 2 * np.pi, 100)
+            moddevs = []
+            for i in modangles:
+                moddevs.append(np.std(np.mod(angle + i, 2 * np.pi)))
+            angledev.append(np.min(moddevs) / (np.pi / 2))
+
+    return np.array(magdev), np.array(angledev)
+    
+    
+def squint_stddev_plots(bins=40, save=False):
+
+    rev = [0.1, 0.2, 0.3]
+
+    # Plot histograms of fits
+    fig = plt.figure(1, figsize=(10,10))
+    fig.clf()
+    bins = np.linspace(0, 2, bins)
+
+    for i,r in enumerate(rev):
+        magdev, angledev = squint_time_stddev(rev=r)
+                        
+        # Power law histogram
+        ax = fig.add_subplot(3, 1, i + 1)
+        #ax.hist([magdev, angledev], bins=bins, histtype='step', color=['b', 'r'],
+        #        label=[r'$\rm{Mag./Mean}$', r'$\rm{Angle/(\pi / 2)}$'], linewidth=2.0)
+        ax.hist(magdev, bins=bins, histtype='step', color='b', label=r'$\rm{Mag./Mean}$', lw=2.0)
+        ax.hist(angledev, bins=bins, histtype='step', color='r', label=r'$\rm{Angle/(\pi / 2)}$', lw=2.0, ls='dashed')
+        ax.set_ylabel(r'$\rm{Count}$')
+        ax.text(0.75, 0.8, r'$\rm{Feed Rev} = %.1f$' %r, transform=ax.transAxes)
+        ax.text(0.75, 0.7, r'$\rm{Mag. \ Mean} = %.2f \pm %.2f$' %(np.mean(magdev), np.std(magdev) / np.sqrt(magdev.size)), transform=ax.transAxes)
+        ax.text(0.75, 0.6, r'$\rm{Angle \ Mean} = %.2f \pm %.2f$' %(np.mean(angledev), np.std(angledev) / np.sqrt(angledev.size)), transform=ax.transAxes)
+
+        if i == 2:
+            ax.set_xlabel(r'$\rm{Normalized \ Standard \ Devation}$')
+            ax.legend(loc='lower right')
+            
+    if save:
+        if save is True: save = 'squinttime_rev.png'
+        plt.savefig(save)
+
+
+
+
+## Unreviewed
 
 def magfreq_plot(mincount=1, log=False, saveas='magfreq.pdf'):
     """Study magnitude vs frequency"""
@@ -280,7 +568,7 @@ def magfreq_plot(mincount=1, log=False, saveas='magfreq.pdf'):
     pp.close()
   
   
-def magfreq_powerlaw_fit(mincount=1, bins = 25, fit_of_medians=False, rev=False):
+def magfreq_powerlaw_fit(mincount=2, rev=False):
     """Compute power laws of squint vs mag dependence for each antfeedrev"""
 
     # Query data
@@ -290,8 +578,10 @@ def magfreq_powerlaw_fit(mincount=1, bins = 25, fit_of_medians=False, rev=False)
     freqlist = np.unique(data['freq'])
     daylist = np.unique(np.round(data['date']))
 
-    slopes = []
     powers = []
+    chisq0 = []
+    chisq1 = []
+    sizes = []
 
     # Examine each antfeedred
     for afr in antfeedrevs:
@@ -300,81 +590,44 @@ def magfreq_powerlaw_fit(mincount=1, bins = 25, fit_of_medians=False, rev=False)
 
         idata = data[np.where(data['antfeedrev'] == afr)]
         
-        # Take best fit of the median squintmag for each frequency
-        if fit_of_medians:
-            ifreqs = []
-            imedians = []
-            
-            # Examine each frequency
-            for f in freqlist:
-                ifdata = idata[np.where(idata['freq'] == f)]
-                # Skip if not enough points for this frequency
-                if ifdata.size < mincount: continue
-                
-                # Get statistics of data closest to median
-                ifmedianmag = np.median(ifdata['squintmag'])
-                ifindex = (np.abs(ifdata['squintmag'] - ifmedianmag)).argmin()
-                ifmag = ifdata['squintmag'][ifindex]
-                iferr = ifdata['squintmag_uc'][ifindex]
-                
-                ifreqs.append(f)
-                imedians.append(ifmag)
-                
-            if len(ifreqs) < 2: continue
-            
-            # MIN AMPLITUDE:
-            ave_amp = np.average(imedians)
-            if ave_amp > 4:
-                print afr, ave_amp
-            else:
+        # Examine each day
+        for d in daylist:
+            iddata = idata[np.where(np.round(idata['date']) == d)]
+            # Skip if no points for this antfeedrev in this run
+            if iddata.size < mincount: 
                 continue
-                
-            # Compute power law and linear slopes    
-            logfit = np.polyfit(np.log10(ifreqs), np.log10(imedians), 1)
+            else:
+                sizes.append(iddata.size)
+            
+            idf = iddata['freq']
+            ids = iddata['squintmag']
+            ids_uc = iddata['squintmag_uc']
+            
+            if iddata.size > 10:
+                plt.clf()
+                plt.errorbar(idf, ids, yerr=ids_uc, fmt='.')
+                raw_input('Paused')
+            
+            # Compute best fit power law index   
+            logfit = np.polyfit(np.log10(iddata['freq']), 
+                                np.log10(iddata['squintmag']), 1)
             powers.append(logfit[0])
             
-            linfit = np.polyfit(ifreqs, imedians, 1)
-            slopes.append(linfit[0])
+            # Test 0 power law fit
+            fit0 = np.mean(ids)
+            chisq = np.sum((ids - fit0)**2 / ids_uc**2)
+            chisq0.append(chisq)
+            
+            # Test -1 power law fit
+            A = np.mean(ids * idf)
+            fit1 = A * 1./ idf
+            chisq = np.sum((ids - fit1)**2 / ids_uc**2)
+            chisq1.append(chisq)
+ 
+    return np.array(powers), np.array(chisq0), np.array(chisq1), np.array(sizes)
+    
         
-        # Take median of the best fit of each day
-        else:
-            logfits = []
-            linfits = []
-            
-            # Examine each day
-            for d in daylist:
-                iddata = idata[np.where(np.round(idata['date']) == d)]
-                # Skip if no points for this antfeedrev in this run
-                if iddata.size < 2: 
-                    continue
-                
-                # Compute power law and linear slopes    
-                logfit = np.polyfit(np.log10(iddata['freq']), 
-                                    np.log10(iddata['squintmag']), 1)
-                logfits.append(logfit[0])
-                
-                linfit = np.polyfit(iddata['freq'], iddata['squintmag'], 1)
-                linfits.append(linfit[0])
-                
-            if len(logfits) < mincount: 
-                continue
-            
-            # Get statistics of data closest to median
-            imedianlog = np.median(logfits)
-            logmedindex = (np.abs(logfits - imedianlog)).argmin()
-            
-            imedianlin = np.median(linfits)
-            linmedindex = (np.abs(linfits - imedianlin)).argmin()
-            
-            #powers.append(logfits[logmedindex])
-            #slopes.append(linfits[linmedindex])
-            for p in logfits:
-                powers.append(p)
-            
-    return np.array(powers), np.array(slopes)
-    
-    
-def magfreq_powerlaw_rev(mincount=1, bins=50, save=False, fit_of_medians=False):
+def magfreq_powerlaw_rev(mincount=2, bins=50, save=False, fit_of_medians=False):
     """Compute power laws by rev of squint vs mag dependence for each antfeedrev
     
     -look at large amplitudes
@@ -391,12 +644,16 @@ def magfreq_powerlaw_rev(mincount=1, bins=50, save=False, fit_of_medians=False):
     fig.clf()
 
     for i in xrange(len(rev)):
-        powers, slopes = magfreq_powerlaw_fit(mincount=mincount, fit_of_medians=fit_of_medians, rev=rev[i])
+        powers, ch0, ch1, sizes = magfreq_powerlaw_fit(mincount=mincount, fit_of_medians=fit_of_medians, rev=rev[i])
         
         # Disregard outliers
         outliers = (np.abs(powers) >= 5)
         print '%i outliers of %i' %(outliers.sum(), powers.size)
         powers = powers[~outliers]
+        
+        # Print likelihood ratios
+        return ch0, ch1, sizes
+        print 'Log-Likelihood ratio (1/0):', np.log10(np.product(pdf1/pdf0))
                         
         # Power law histogram
         ax = fig.add_subplot(3, 1, i + 1)
@@ -628,281 +885,5 @@ def beam_width_vs_freq(bins=50):
     plt.savefig('beamw_freq.png', type='png')
 
 
-def beam_shape_plot(coords='mag_angle', type='scatter', saveas=None):
-    """
-    Make distribution plots of beam shape.
-    
-    Inputs:
-        coords      'az_el' or 'mag_angle' or 'mag_ecc'
-        type        'scatter' or 'density'
-        saveas      Path and filename for saving (will be prepended with polarization)
-    
-    """
-    
-    if coords == 'az_el':
-        data = hextoolkit.querysql(['freq', 'x_width_el', 'x_width_az',
-                                    'y_width_el', 'y_width_az'])
-        fghz = data['freq'] / 1000.
-        
-        xx = data['x_width_az'] * 2 * fghz
-        xx_uc = data['x_width_az_uc'] * 2 * fghz
-        xy = data['x_width_el'] * 2 * fghz
-        xy_uc = data['x_width_el_uc'] * 2 * fghz
-        yx = data['y_width_az'] * 2 * fghz
-        yx_uc = data['y_width_az_uc'] * 2 * fghz
-        yy = data['y_width_el'] * 2 * fghz
-        yy_uc = data['y_width_el_uc'] * 2 * fghz
-        
-        hline = 3.5
-        vline = 3.5
-        
-        xlabel = lambda pol: r'$\rm{%s \, Azimuth \, FWHM \, (degrees \times \, f_{GHz})}$' %pol
-        ylabel = lambda pol: r'$\rm{%s \, Elevation \, FWHM \, (degrees \times \, f_{GHz})}$' %pol
-        
-        if saveas == True:
-            saveas = 'az_el.png'
-            
-        xlim = None
-        ylim = None
-        
-        print 'DATA: xwa, ywa, xwe, ywe'
-    
-    elif coords == 'mag_angle':
-        data = hextoolkit.querysql(['freq', 'xmag', 'xangle', 'ymag', 'yangle'])
-        fghz = data['freq'] / 1000.
-        
-        xx = data['xmag'] * 2 * fghz
-        xx_uc = data['xmag_uc'] * 2 * fghz
-        xy = data['xangle'] * 180. / np.pi
-        xy_uc = data['xangle_uc'] * 180. / np.pi
-        yx = data['ymag'] * 2 * fghz
-        yx_uc = data['ymag_uc'] * 2 * fghz
-        yy = data['yangle'] * 180. / np.pi
-        yy_uc = data['yangle_uc'] * 180. / np.pi
-        
-        hline = 45.0
-        vline = 3.5
-        
-        xlabel = lambda pol: r'$\rm{%s \, Beam \, Size \, (degrees \times \, f_{GHz})}$' %pol
-        ylabel = lambda pol: r'$\rm{%s \, Beam \, Angle \, (degrees)}$' %pol
-        
-        if saveas == True:
-            saveas = 'mag_angle.png'
-            
-        xlim = None
-        ylim = None
-        
-        print 'DATA: x mag, y mag, x angle, y angle'
-    
-    elif coords == 'mag_ecc':
-        data = hextoolkit.querysql(['freq', 'xmag', 'ymag'])
-        fghz = data['freq'] / 1000.
-        
-        xm = data['xmag']
-        xm_uc = data['xmag_uc']
-        
-        xa2 = data['x_width_az'] ** 2
-        xa2_uc = 2 * data['x_width_az'] * data['x_width_az_uc']
-        xe2 = data['x_width_el'] ** 2
-        xe2_uc = 2 * data['x_width_el'] * data['x_width_el_uc']
-        
-        pmask = (xa2 >= xe2)
-        xfrac = xa2 / xe2
-        xfrac[pmask] = (xe2 / xa2)[pmask]
-        xfrac_uc = xfrac * np.sqrt((xa2_uc / xa2)**2 + (xe2_uc / xe2)**2)
-        xecc = np.sqrt(1 - xfrac)
-        xecc[pmask] *= -1
-        xecc_uc = 0.5 * xecc / (1 - xfrac) * xfrac_uc
-        
-        ym = data['ymag']
-        ym_uc = data['ymag_uc']
-        
-        ya2 = data['y_width_az'] ** 2
-        ya2_uc = 2 * data['y_width_az'] * data['y_width_az_uc']
-        ye2 = data['y_width_el'] ** 2
-        ye2_uc = 2 * data['y_width_el'] * data['y_width_el_uc']
-        
-        pmask = (ya2 >= ye2)
-        yfrac = ya2 / ye2
-        yfrac[pmask] = (ye2 / ya2)[pmask]
-        yfrac_uc = yfrac * np.sqrt((ya2_uc / ya2)**2 + (ye2_uc / ye2)**2)
-        yecc = np.sqrt(1 - yfrac)
-        yecc[pmask] *= -1
-        yecc_uc = 0.5 * yecc / (1 - yfrac) * yfrac_uc
-        
-        xx = data['xmag'] * 2 * fghz
-        xx_uc = data['xmag_uc'] * 2 * fghz
-        xy = xecc
-        xy_uc = xecc_uc
-        yx = data['ymag'] * 2 * fghz
-        yx_uc = data['ymag_uc'] * 2 * fghz
-        yy = yecc
-        yy_uc = yecc_uc
-        
-        hline = 0.0
-        vline = 3.5
-        
-        xlabel = lambda pol: r'$\rm{%s \, Beam \, Size \, (degrees \times \, f_{GHz})}$' %pol
-        ylabel = lambda pol: r'$\rm{%s \, Eccentricity}$' %pol
-        
-        if saveas == True:
-            saveas = 'mag_ecc.png'
-            
-        xlim = None
-        ylim = [-1, 1]
-        
-        print 'DATA: x mag, y mag, x ecc, y ecc'
 
-    # Print stats
-    print 'MEDIAN:', np.median(xx), np.median(yx), np.median(xy), np.median(yy)
-    print 'MEAN:  ', np.mean(xx), np.mean(yx), np.mean(xy), np.mean(yy)
-    print ' ERR:  ', np.std(xx) / np.sqrt(xx.size), np.std(yx) / np.sqrt(yx.size), np.std(xy) / np.sqrt(xy.size), np.std(yy) / np.sqrt(yy.size)
-    print 'STDEV: ', np.std(xx), np.std(yx), np.std(xy), np.std(yy)
-    
-    # Definitions for the axes
-    nullfmt = matplotlib.ticker.NullFormatter()
-    left, width = 0.1, 0.65
-    bottom, height = 0.1, 0.65
-    bottom_h = left_h = left+width+0.02
-    
-    rect_scatter = [left, bottom, width, height]
-    rect_histx = [left, bottom_h, width, 0.2]
-    rect_histy = [left_h, bottom, 0.2, height]
-
-    for pol in ['X', 'Y']:
-
-        plt.figure(1, figsize=(8,8))
-        plt.clf()
-        
-        if pol == 'X':
-            x, xuc, y, yuc = xx, xx_uc, xy, xy_uc
-        else:
-            x, xuc, y, yuc = yx, yx_uc, yy, yy_uc
-                
-        axScatter = plt.axes(rect_scatter)
-        axHistx = plt.axes(rect_histx)
-        axHisty = plt.axes(rect_histy)
-        
-        # Remove histogram ticklabels
-        axHistx.xaxis.set_major_formatter(nullfmt)
-        axHisty.yaxis.set_major_formatter(nullfmt)
-        
-        # Scatter/Density plot
-        if type == 'scatter':
-            axScatter.errorbar(x, y, xerr=xuc, yerr=yuc, fmt='o')
-        if type == 'density':
-            density, xedges, yedges = np.histogram2d(x, y, bins=100)
-            extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-            logd = np.log10(density)
-            logd[logd == -np.inf] = -1
-            levels = np.arange(-0.5, np.ceil(np.max(logd)), 0.5)
-            axScatter.contour(logd.T, levels, extent=extent)
-         
-        # Histograms
-        bins = 40
-        xn, xb, xp = axHistx.hist(x, bins=bins, log=True)
-        yn, yb, yp = axHisty.hist(y, bins=bins, orientation='horizontal', log=True)
-                
-        # Limits
-        if xlim:
-            axScatter.set_xlim(xlim)
-        else:
-            xlim = axScatter.get_xlim()
-        if ylim:
-            axScatter.set_ylim(ylim)
-        else:
-            ylim = axScatter.get_ylim()
-          
-        axHistx.set_xlim(xlim)
-        axHisty.set_ylim(ylim)
-        
-        # Gaussian fits
-        N = 1000
-        gx = np.linspace(xlim[0], xlim[1], N)
-        gy = np.linspace(ylim[0], ylim[1], N)
-        xylim = axHistx.get_ylim()
-        yxlim = axHisty.get_xlim()
-        fx = normal_dist(np.mean(x), np.std(x))(gx) * x.size * np.diff(xb)[0]
-        fy = normal_dist(np.mean(y), np.std(y))(gy) * y.size * np.diff(yb)[0]
-        axHistx.plot(gx, fx, 'g')
-        axHisty.plot(fy, gy, 'g')
-        axHistx.set_ylim(xylim)
-        axHisty.set_xlim(yxlim)
-        
-        # Axis labels
-        axScatter.set_xlabel(xlabel(pol))
-        axScatter.set_ylabel(ylabel(pol))
-        
-        # Lines
-        axScatter.axhline(hline, c='r')
-        axScatter.axvline(vline, c='r')
-        axHistx.axvline(vline, c='r')
-        axHisty.axhline(hline, c='r')
-
-        # Save
-        if saveas:
-            folder, file = os.path.split(saveas)
-            plt.savefig(os.path.join(folder, pol + '_' + file))
-        
-
-def squintmag_time_evolution(rev=False):
-    
-    # Query data
-    data = hextoolkit.querysql(['antfeedrev','date','squintmag','freq'])
-    
-    antfeedrevs = np.unique(data['antfeedrev'])
-    freqlist = np.unique(data['freq'])
-    daylist = np.unique(np.round(data['date']))
-
-    deviations = []
-    
-    # Examine each antfeedred
-    for afr in antfeedrevs:
-        if rev:
-            if np.round(np.mod(afr, 1), 1) != rev: continue
-
-        idata = data[np.where(data['antfeedrev'] == afr)]
-
-        # Examine each day
-        for f in freqlist:
-            ifdata = idata[np.where(idata['freq'] == f)]
-            # Skip if no points for this antfeedrev in this run
-            if ifdata.size < 2: 
-                continue
-            
-            # Compute standard deviation as a fraction of the mean
-            squint = ifdata['squintmag']
-            squint /= squint.mean()
-            
-            deviations.append(np.std(squint))
-
-    return np.array(deviations)
-    
-    
-def squintmag_time_rev(bins=50, save=False):
-
-    rev = [0.1, 0.2, 0.3]
-
-    # Plot histograms of fits
-    fig = plt.figure(1, figsize=(10,10))
-    fig.clf()
-
-    for i in xrange(len(rev)):
-        dev = squintmag_time_evolution(rev=rev[i])
-                        
-        # Power law histogram
-        ax = fig.add_subplot(3, 1, i + 1)
-        ax.hist(dev, bins=np.linspace(0, 2, bins))
-        ax.set_ylabel(r'$\rm{Count}$')
-        ax.text(0.75, 0.8, r'$\rm{Feed Rev} = %.1f$' %rev[i], transform=ax.transAxes)
-        ax.text(0.75, 0.7, r'$\rm{Mean} = %.2f \pm %.2f$' %(np.mean(dev), np.std(dev) / np.sqrt(dev.size)), transform=ax.transAxes)
-        #ax.text(0.05, 0.7, r'$\rm{StDev} = %.2f$' %np.std(dev), transform=ax.transAxes)
-
-        if i == 2:
-            ax.set_xlabel(r'$\rm{Squint \ Mag. \ Fractional \ Standard \ Devation}$')
-            
-    if save:
-        if save == True: save = 'squinttime_rev.png'
-        plt.savefig(save, type='png')
-        
 

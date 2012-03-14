@@ -259,6 +259,7 @@ def gaussread(path):
             squint[j]['squintel_uc'] = np.sqrt (gread[antloc][yloc]['OffEluc']**2 +
                                                 gread[antloc][xloc]['OffEluc']**2) / 60.0
 
+            # Widths in degrees
             squint[j]['x_width_az'] = gread[antloc][xloc]['WidthAz']
             squint[j]['x_width_az_uc'] = gread[antloc][xloc]['WidthAzuc']
             squint[j]['x_width_el'] = gread[antloc][xloc]['WidthEl']

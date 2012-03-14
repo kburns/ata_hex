@@ -14,30 +14,17 @@ import hexplot
 import hexanalysis
 
 
-plotdir = '/Users/kburns/Research/radio/plots/paper_images/'
+plotdir = '/Users/kburns/Research/radio/plots/'
 
-def all():
-    # Change to plot directory
-    plotdir = '/Users/kburns/Research/radio/plots/paper_images/'
-    os.chdir(plotdir)
-    
-    # Run Plots
-    
-    # Sumchisq distribution
-    hexanalysis.abs_dist('sumchisq', 90, save=True)
-        
-    hexanalysis.beam_mag_angle()
-    
+def others()  
     ha.magfreq_powerlaw_rev(save=True)
 
 
 
 
 def dist_sumchisq():
-    
-
-
-
+    path = os.path.join(plotdir, 'dist_sumchisq.png')
+    hexanalysis.abs_dist('sumchisq', 90, saveas=path)
 
 def beam_shape():
     path = os.path.join(plotdir, 'beam_shape', 'scatter/')
