@@ -14,8 +14,18 @@ import scipy.stats
 import matplotlib
 import matplotlib.pyplot as plt
 import hextoolkit
-from kbtoolkit import normal_dist
 
+
+def normal_dist(mean, stdev):
+    """
+    Return function representing normal distribution for given mean and standard deviation.
+    """
+    
+    m = mean
+    s = stdev
+    f = lambda x:  np.exp(-(x - m)**2 / (2 * s**2)) / (s * np.sqrt(2 * np.pi))
+    return f
+        
 
 def abs_dist(tag, percentile=95, flag=False, plot=True, saveas=False):
     """
