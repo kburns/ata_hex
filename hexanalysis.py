@@ -511,7 +511,7 @@ def squint_stddev_plots(bins=40, save=False):
 
 
 
-## Unreviewed
+## May require clean up
 
 def magfreq_plot(mincount=1, log=False, saveas='magfreq.pdf'):
     """Study magnitude vs frequency"""
@@ -579,6 +579,7 @@ def magfreq_powerlaw_fit(mincount=2, rev=False):
     daylist = np.unique(np.round(data['date']))
 
     powers = []
+    chisqbest = []
     chisq0 = []
     chisq1 = []
     sizes = []
@@ -603,15 +604,18 @@ def magfreq_powerlaw_fit(mincount=2, rev=False):
             ids = iddata['squintmag']
             ids_uc = iddata['squintmag_uc']
             
-            if iddata.size > 10:
-                plt.clf()
-                plt.errorbar(idf, ids, yerr=ids_uc, fmt='.')
-                raw_input('Paused')
+            #if iddata.size > 10:
+            #    plt.clf()
+            #    plt.errorbar(idf, ids, yerr=ids_uc, fmt='.')
+            #    raw_input('Paused')
             
             # Compute best fit power law index   
             logfit = np.polyfit(np.log10(iddata['freq']), 
                                 np.log10(iddata['squintmag']), 1)
-            powers.append(logfit[0])
+            powers.append(logfit[0])                    
+            fit = 10**logfit[1] * idf ** logfit[0]
+            chisq = np.sum((ids - fit)**2 / ids_uc**2)
+            chisqbest.append(chisq)
             
             # Test 0 power law fit
             fit0 = np.mean(ids)
@@ -624,14 +628,13 @@ def magfreq_powerlaw_fit(mincount=2, rev=False):
             chisq = np.sum((ids - fit1)**2 / ids_uc**2)
             chisq1.append(chisq)
  
-    return np.array(powers), np.array(chisq0), np.array(chisq1), np.array(sizes)
+    return np.array(powers), np.array(chisqbest), np.array(chisq0), np.array(chisq1), np.array(sizes)
     
         
-def magfreq_powerlaw_rev(mincount=2, bins=50, save=False, fit_of_medians=False):
+def magfreq_powerlaw_rev(mincount=2, bins=50, save=False):
     """Compute power laws by rev of squint vs mag dependence for each antfeedrev
     
     -look at large amplitudes
-    -include uncertainties in median
     -test hypothesis -1 fit
     -goodness of fit
     
@@ -644,15 +647,21 @@ def magfreq_powerlaw_rev(mincount=2, bins=50, save=False, fit_of_medians=False):
     fig.clf()
 
     for i in xrange(len(rev)):
-        powers, ch0, ch1, sizes = magfreq_powerlaw_fit(mincount=mincount, fit_of_medians=fit_of_medians, rev=rev[i])
+        powers, chb, ch0, ch1, sizes = magfreq_powerlaw_fit(mincount=mincount, rev=rev[i])
         
         # Disregard outliers
-        outliers = (np.abs(powers) >= 5)
+        #outliers = (chb / sizes >= 10)
+        #outliers = (np.abs(powers) >= 5)
+        outliers = (ch0 >= 100) + (ch1 >= 100)
         print '%i outliers of %i' %(outliers.sum(), powers.size)
         powers = powers[~outliers]
+        ch0 = ch0[~outliers]
+        ch1 = ch1[~outliers]
+        sizes = sizes[~outliers]
         
         # Print likelihood ratios
-        return ch0, ch1, sizes
+        pdf0 = scipy.stats.distributions.chi2.pdf(ch0, sizes)
+        pdf1 = scipy.stats.distributions.chi2.pdf(ch1, sizes)
         print 'Log-Likelihood ratio (1/0):', np.log10(np.product(pdf1/pdf0))
                         
         # Power law histogram
